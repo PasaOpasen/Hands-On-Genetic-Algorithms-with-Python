@@ -9,7 +9,7 @@ FLAG_LOCATION = 0.5
 
 class ImageTest:
 
-    def __init__(self, imagePath, polygonSize):
+    def __init__(self, imagePath, polygonSize, start_color = 'black'):
         """
         Initializes an instance of the class
         :param imagePath: the path of the file containing the reference image
@@ -21,6 +21,11 @@ class ImageTest:
         self.width, self.height = self.refImage.size
         self.numPixels = self.width * self.height
         self.refImageCv2 = self.toCv2(self.refImage)
+        self.refImageCv2int16 = self.refImageCv2.astype(np.int16)
+        
+        
+        self.start_solor = start_color
+    
 
     def polygonDataToImage(self, polygonData):
         """
@@ -31,7 +36,7 @@ class ImageTest:
         """
 
         # start with a new image:
-        image = Image.new('RGB', (self.width, self.height))#TODO
+        image = Image.new('RGB', (self.width, self.height), color = self.start_solor)#TODO
         draw = ImageDraw.Draw(image, 'RGBA')
 
         # divide the polygonData to chunks, each containing the data for a single polygon:
@@ -61,7 +66,8 @@ class ImageTest:
         del draw
 
         return image
-
+    
+    #@profile
     def getDifference(self, polygonData, method="MSE"):
         """
         accepts polygon data, creates an image containing these polygons, and calculates the difference
@@ -120,9 +126,11 @@ class ImageTest:
 
         # plot the image side-by-side with the reference image:
         self.plotImages(image, header)
-
+        
         # save the plot to file:
         plt.savefig(imageFilePath)
+        
+        plt.show()
 
     # utility methods:
 
@@ -132,7 +140,22 @@ class ImageTest:
 
     def getMse(self, image):
         """calculates MSE of difference between the given image and the reference image"""
-        return np.sum((self.toCv2(image).astype("float") - self.refImageCv2.astype("float")) ** 2)/float(self.numPixels)
+        
+        # very bad solution
+        
+        # x, y, z = self.refImageCv2.shape
+        
+        # s = 0
+        # for i in range(x):
+        #     for j in range(y):
+        #         for k in range(z):
+        #             s += (self.toCv2(image)[i,j,k]- self.refImageCv2[i,j,k])**2
+        
+        # 210 ms
+        return np.sum(np.square(self.toCv2(image).astype(np.int16) - self.refImageCv2int16, dtype = 'float'))/float(self.numPixels)
+        
+        # old solution: 428ms
+        # return np.sum((self.toCv2(image).astype("float") - self.refImageCv2.astype("float")) ** 2)/float(self.numPixels)
 
     def getSsim(self, image):
         """calculates mean structural similarity index between the given image and the reference image"""
